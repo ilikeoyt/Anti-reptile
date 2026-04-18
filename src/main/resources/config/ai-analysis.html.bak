@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI分析 - 反爬虫配置管理</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+        
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #da190b;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        
+        .alert-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        
+        .alert-info {
+            color: #004085;
+            background-color: #cce5ff;
+            border-color: #b8daff;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading::after {
+            content: "";
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .analysis-result {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .analysis-result h1,
+        .analysis-result h2,
+        .analysis-result h3,
+        .analysis-result h4,
+        .analysis-result h5,
+        .analysis-result h6 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+        
+        .analysis-result h1 { font-size: 2em; border-bottom: 1px solid #eaecef; padding-bottom: .3em; }
+        .analysis-result h2 { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: .3em; }
+        .analysis-result h3 { font-size: 1.25em; }
+        .analysis-result h4 { font-size: 1em; }
+        
+        .analysis-result p {
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+        
+        .analysis-result ul,
+        .analysis-result ol {
+            margin-top: 0;
+            margin-bottom: 16px;
+            padding-left: 2em;
+        }
+        
+        .analysis-result li {
+            margin-top: 0.25em;
+        }
+        
+        .analysis-result code {
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            background-color: rgba(27,31,35,0.05);
+            border-radius: 3px;
+        }
+        
+        .analysis-result pre {
+            padding: 16px;
+            overflow: auto;
+            font-size: 85%;
+            line-height: 1.45;
+            background-color: #f6f8fa;
+            border-radius: 3px;
+        }
+        
+        .analysis-result pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        
+        .analysis-result table {
+            border-spacing: 0;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+        
+        .analysis-result table th,
+        .analysis-result table td {
+            padding: 6px 13px;
+            border: 1px solid #dfe2e5;
+        }
+        
+        .analysis-result table th {
+            font-weight: 600;
+            background-color: #f6f8fa;
+        }
+        
+        .analysis-result table tr {
+            background-color: #fff;
+            border-top: 1px solid #c6cbd1;
+        }
+        
+        .analysis-result table tr:nth-child(2n) {
+            background-color: #f6f8fa;
+        }
+        
+        .analysis-result blockquote {
+            padding: 0 1em;
+            color: #6a737d;
+            border-left: 0.25em solid #dfe2e5;
+            margin: 0 0 16px 0;
+        }
+        
+        .analysis-result hr {
+            height: 0.25em;
+            padding: 0;
+            margin: 24px 0;
+            background-color: #e1e4e8;
+            border: 0;
+        }
+        
+        .analysis-result strong {
+            font-weight: 600;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI分析</h1>
+            <div>
+                <button class="btn btn-secondary" onclick="window.location.href='/ycx-config/index.html'">返回配置</button>
+                <button class="btn btn-primary" onclick="analyzeLatestRequests()">分析最新请求</button>
+                <button class="btn btn-primary" onclick="analyzeAllRequests()">分析所有请求</button>
+                <button class="btn btn-danger" onclick="clearAllRequests()">清除所有请求</button>
+            </div>
+        </div>
+        
+        <div id="alert" class="alert" style="display: none;"></div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <h3>总请求数</h3>
+                <div class="value" id="totalRequests">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>已分析请求数</h3>
+                <div class="value" id="analyzedRequests">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>IP规则拦截</h3>
+                <div class="value" id="ipRuleCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>UA规则拦截</h3>
+                <div class="value" id="uaRuleCount">0</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>AI分析结果</h2>
+            <div id="analysisResult" class="analysis-result" style="display: none;"></div>
+            <div id="analysisLoading" class="loading" style="display: none;"></div>
+            <div id="analysisEmpty" class="empty-state" style="display: none;">
+                <i>📊</i>
+                <p>暂无分析结果，请点击上方按钮开始分析</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>请求信息列表</h2>
+            <div class="table-container">
+                <table id="requestsTable">
+                    <thead>
+                        <tr>
+                            <th>请求ID</th>
+                            <th>请求时间</th>
+                            <th>请求方法</th>
+                            <th>请求URL</th>
+                            <th>客户端IP</th>
+                            <th>拦截规则</th>
+                            <th>响应状态</th>
+                            <th>响应时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div id="requestsLoading" class="loading" style="display: none;"></div>
+            <div id="requestsEmpty" class="empty-state" style="display: none;">
+                <i>📭</i>
+                <p>暂无请求信息</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 页面加载时获取请求信息
+        window.onload = function() {
+            loadRequests();
+            loadRequestCount();
+        };
+        
+        // 加载请求信息
+        function loadRequests() {
+            document.getElementById('requestsLoading').style.display = 'block';
+            document.getElementById('requestsEmpty').style.display = 'none';
+            
+            fetch('/anti-reptile/ai/requests')
+                .then(response => response.json())
+                .then(result => {
+                    document.getElementById('requestsLoading').style.display = 'none';
+                    
+                    if (result.success && result.data && result.data.length > 0) {
+                        displayRequests(result.data);
+                        updateStats(result.data);
+                    } else {
+                        document.getElementById('requestsEmpty').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('requestsLoading').style.display = 'none';
+                    showAlert('加载请求信息失败: ' + error.message, 'error');
+                });
+        }
+        
+        // 显示请求信息
+        function displayRequests(requests) {
+            const tbody = document.getElementById('requestsTableBody');
+            tbody.innerHTML = '';
+            
+            requests.forEach(request => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${request.requestId}</td>
+                    <td>${new Date(request.requestTime).toLocaleString()}</td>
+                    <td>${request.requestMethod}</td>
+                    <td>${request.requestUrl}</td>
+                    <td>${request.remoteAddr}</td>
+                    <td>${request.interceptRule}</td>
+                    <td>${request.responseStatus}</td>
+                    <td>${request.responseTime}ms</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // 更新统计信息
+        function updateStats(requests) {
+            document.getElementById('totalRequests').textContent = requests.length;
+            
+            let ipCount = 0;
+            let uaCount = 0;
+            let analyzedCount = 0;
+            
+            requests.forEach(request => {
+                if (request.interceptRule === 'IpRule') {
+                    ipCount++;
+                } else if (request.interceptRule === 'UaRule') {
+                    uaCount++;
+                }
+                if (request.aiAnalysisResult) {
+                    analyzedCount++;
+                }
+            });
+            
+            document.getElementById('ipRuleCount').textContent = ipCount;
+            document.getElementById('uaRuleCount').textContent = uaCount;
+            document.getElementById('analyzedRequests').textContent = analyzedCount;
+        }
+        
+        // 加载请求信息数量
+        function loadRequestCount() {
+            fetch('/anti-reptile/ai/requests/count')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        document.getElementById('totalRequests').textContent = result.count;
+                    }
+                })
+                .catch(error => {
+                    console.error('加载请求信息数量失败:', error);
+                });
+        }
+        
+        // 分析最新请求
+        function analyzeLatestRequests() {
+            analyzeRequests('/anti-reptile/ai/analyze/latest?limit=10');
+        }
+        
+        // 分析所有请求
+        function analyzeAllRequests() {
+            if (!confirm('确定要分析所有请求吗？这可能需要一些时间。')) {
+                return;
+            }
+            analyzeRequests('/anti-reptile/ai/analyze');
+        }
+        
+        // 分析请求（使用Markdown渲染）
+        function analyzeRequests(url) {
+            document.getElementById('analysisLoading').style.display = 'block';
+            document.getElementById('analysisResult').style.display = 'block';
+            document.getElementById('analysisResult').innerHTML = '';
+            document.getElementById('analysisEmpty').style.display = 'none';
+            
+            fetch(url, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    document.getElementById('analysisLoading').style.display = 'none';
+                    
+                    if (result.success) {
+                        // 使用marked解析Markdown
+                        const htmlContent = marked.parse(result.analysis);
+                        document.getElementById('analysisResult').innerHTML = htmlContent;
+                        showAlert('分析完成', 'success');
+                        loadRequests();
+                    } else {
+                        showAlert(result.message || '分析失败', 'error');
+                        document.getElementById('analysisEmpty').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('analysisLoading').style.display = 'none';
+                    showAlert('AI分析失败: ' + error.message, 'error');
+                    document.getElementById('analysisEmpty').style.display = 'block';
+                });
+        }
+        
+        // 清除所有请求
+        function clearAllRequests() {
+            if (!confirm('确定要清除所有请求信息吗？此操作不可恢复。')) {
+                return;
+            }
+            
+            fetch('/anti-reptile/ai/requests', {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showAlert('清除请求信息成功', 'success');
+                        loadRequests();
+                        loadRequestCount();
+                    } else {
+                        showAlert(result.message || '清除失败', 'error');
+                    }
+                })
+                .catch(error => {
+                    showAlert('清除请求信息失败: ' + error.message, 'error');
+                });
+        }
+        
+        // 显示提示信息
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = 'alert alert-' + type;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

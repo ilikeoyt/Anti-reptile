@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>反爬虫配置管理 - 极简控制台</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --accent: #00ff88;
+            --danger: #ff4757;
+            --info: #00d2ff;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --sidebar-w: 240px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: #0b1120;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            position: fixed;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+        .sidebar-header { padding: 30px 20px; text-align: center; color: var(--accent); letter-spacing: 2px; font-weight: bold; }
+        .tab {
+            padding: 16px 24px;
+            cursor: pointer;
+            color: var(--text-dim);
+            transition: 0.3s;
+            font-size: 14px;
+            border-left: 3px solid transparent;
+        }
+        .tab.active {
+            color: var(--accent);
+            background: rgba(0, 255, 136, 0.05);
+            border-left-color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* 主体内容 */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-w);
+            padding: 40px 60px;
+            max-width: 1200px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 20px;
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 表单样式 */
+        .form-group { margin-bottom: 24px; }
+        label { display: block; margin-bottom: 8px; color: var(--text-dim); font-size: 13px; font-weight: 500; }
+        
+        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+
+        input[type="text"], input[type="number"], input[type="password"], select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+            transition: 0.2s;
+        }
+        input:focus, textarea:focus { border-color: var(--accent); background: rgba(30, 41, 59, 1); }
+        textarea { min-height: 80px; font-family: monospace; font-size: 13px; }
+
+        .checkbox-item { display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-main); margin-bottom: 10px; }
+        .checkbox-item input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+        /* 按钮 */
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: 0.3s; font-size: 14px; }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 15px rgba(0, 255, 136, 0.3); }
+        .btn-secondary { background: rgba(255, 71, 87, 0.1); color: var(--danger); border: 1px solid var(--danger); }
+        .btn-info { background: rgba(0, 210, 255, 0.1); color: var(--info); border: 1px solid var(--info); }
+
+        /* 提示框 & 弹窗 */
+        .alert { position: fixed; top: 20px; right: 20px; padding: 15px 30px; border-radius: 8px; z-index: 2000; display: none; }
+        .alert-success { background: var(--accent); color: #000; }
+        .alert-error { background: var(--danger); color: #fff; }
+
+        #blacklistModal {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-body { background: var(--bg-card); padding: 30px; border-radius: 16px; width: 90%; max-width: 800px; }
+    </style>
+</head>
+<body>
+    <div id="alert" class="alert"></div>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">YCX-SHIELD</div>
+        <nav>
+            <div class="tab active" data-tab="general">⚡ 通用配置</div>
+            <div class="tab" data-tab="ip">🌐 IP 规则</div>
+            <div class="tab" data-tab="ua">📱 User-Agent 规则</div>
+            <div class="tab" data-tab="cookie">🍪 Cookie 规则</div>
+            <div class="tab" data-tab="behavior">🔗 行为链路</div>
+            <div class="tab" data-tab="ai">🤖 AI 配置</div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header>
+            <h1>反爬虫安全中心</h1>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-info" onclick="window.location.href='/ycx-config/ai-analysis.html'">AI 态势分析</button>
+                <button class="btn btn-secondary" id="logoutBtn">安全退出</button>
+            </div>
+        </header>
+
+        <div class="tab-content active" id="general">
+            <div class="form-group">
+                <label class="checkbox-item"><input type="checkbox" id="enabled"> 启用反爬虫插件</label>
+                <label class="checkbox-item"><input type="checkbox" id="globalFilterMode"> 启用全局拦截模式</label>
+            </div>
+            <div class="form-group">
+                <label for="includeUrls">需要反爬的接口列表 (Include)</label>
+                <textarea id="includeUrls" placeholder="/api/login, /api/register"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="excludeUrls">排除反爬的接口列表 (Exclude)</label>
+                <textarea id="excludeUrls" placeholder="/api/public"></textarea>
+            </div>
+        </div>
+
+        <div class="tab-content" id="ip">
+            <div class="form-group"><label class="checkbox-item"><input type="checkbox" id="ipEnabled"> 启用 IP 频率规则</label></div>
+            <div class="input-grid">
+                <div class="form-group"><label for="expirationTime">时间窗口 (毫秒)</label><input type="number" id="expirationTime"></div>
+                <div class="form-group"><label for="requestMaxSize">最大请求数</label><input type="number" id="requestMaxSize"></div>
+            </div>
+            <div class="form-group"><label for="ignoreIp">IP 白名单</label><textarea id="ignoreIp"></textarea></div>
+            <div class="form-group"><label for="blackIp">IP 黑名单</label><textarea id="blackIp"></textarea></div>
+            <div class="input-grid">
+                <div class="form-group">
+                    <label for="ipInterceptorStrategy">拦截策略</label>
+                    <select id="ipInterceptorStrategy"><option value="verify">验证码</option><option value="deny">直接拒绝</option></select>
+                </div>
+                <div class="form-group"><label for="penaltyExpirationTime">惩罚时长 (分钟)</label><input type="number" id="penaltyExpirationTime"></div>
+                <div class="form-group"><label for="ipWhitelistExpirationTime">白名单时长 (秒)</label><input type="number" id="ipWhitelistExpirationTime"></div>
+            </div>
+            <button class="btn btn-info" style="width:100%" onclick="viewBlacklist()">🔍 查看基于 BotScout 的实时黑名单</button>
+        </div>
+
+        <div class="tab-content" id="ua">
+            <div class="form-group"><label class="checkbox-item"><input type="checkbox" id="uaEnabled"> 启用 User-Agent 规则</label></div>
+            <div class="input-grid" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <label class="checkbox-item"><input type="checkbox" id="allowedLinux"> 允许 Linux</label>
+                <label class="checkbox-item"><input type="checkbox" id="allowedMobile"> 允许移动端</label>
+                <label class="checkbox-item"><input type="checkbox" id="allowedPc"> 允许 PC</label>
+                <label class="checkbox-item"><input type="checkbox" id="allowedIot"> 允许 IoT</label>
+                <label class="checkbox-item"><input type="checkbox" id="allowedProxy"> 允许代理</label>
+            </div>
+            <div class="form-group"><label for="whiteUa">UA 白名单</label><textarea id="whiteUa"></textarea></div>
+            <div class="form-group"><label for="blackUa">UA 黑名单</label><textarea id="blackUa"></textarea></div>
+            <div class="input-grid">
+                <div class="form-group">
+                    <label for="uaInterceptorStrategy">拦截策略</label>
+                    <select id="uaInterceptorStrategy"><option value="verify">验证码</option><option value="deny">直接拒绝</option></select>
+                </div>
+                <div class="form-group"><label for="uaPenaltyExpirationTime">惩罚时长 (分钟)</label><input type="number" id="uaPenaltyExpirationTime"></div>
+                <div class="form-group"><label for="uaWhitelistExpirationTime">白名单时长 (秒)</label><input type="number" id="uaWhitelistExpirationTime"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="cookie">
+            <div class="form-group"><label class="checkbox-item"><input type="checkbox" id="cookieEnabled"> 启用 Cookie 规则</label></div>
+            <div class="form-group"><label for="requiredCookies">需检查的 Cookie 列表</label><textarea id="requiredCookies"></textarea></div>
+            <div class="form-group"><label class="checkbox-item"><input type="checkbox" id="allowEmptyCookie"> 允许空 Cookie</label></div>
+            <div class="form-group"><label for="blackCookies">Cookie 黑名单</label><textarea id="blackCookies"></textarea></div>
+            <div class="input-grid">
+                <div class="form-group">
+                    <label for="cookieInterceptorStrategy">拦截策略</label>
+                    <select id="cookieInterceptorStrategy"><option value="verify">验证码</option><option value="deny">直接拒绝</option></select>
+                </div>
+                <div class="form-group"><label for="cookiePenaltyExpirationTime">惩罚时长 (分钟)</label><input type="number" id="cookiePenaltyExpirationTime"></div>
+                <div class="form-group"><label for="cookieWhitelistExpirationTime">白名单时长 (秒)</label><input type="number" id="cookieWhitelistExpirationTime"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="behavior">
+            <div class="form-group"><label class="checkbox-item"><input type="checkbox" id="behaviorEnabled"> 启用行为链路规则</label></div>
+            <div class="form-group"><label for="chainRules">链路规则映射 (A=B)</label><textarea id="chainRules" placeholder="/api/detail=/api/list"></textarea></div>
+            <div class="input-grid">
+                <div class="form-group"><label for="chainExpirationTime">链路有效期 (毫秒)</label><input type="number" id="chainExpirationTime"></div>
+                <div class="form-group">
+                    <label for="behaviorInterceptorStrategy">拦截策略</label>
+                    <select id="behaviorInterceptorStrategy"><option value="verify">验证码</option><option value="deny">直接拒绝</option></select>
+                </div>
+                <div class="form-group"><label for="behaviorPenaltyExpirationTime">惩罚时长 (分钟)</label><input type="number" id="behaviorPenaltyExpirationTime"></div>
+                <div class="form-group"><label for="behaviorWhitelistExpirationTime">白名单时长 (秒)</label><input type="number" id="behaviorWhitelistExpirationTime"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="ai">
+            <div class="form-group"><label for="minimaxApiKey">MiniMax API Key</label><input type="password" id="minimaxApiKey"></div>
+            <div class="input-grid">
+                <div class="form-group"><label for="minimaxGroupId">群组 ID (GroupId)</label><input type="text" id="minimaxGroupId"></div>
+                <div class="form-group"><label for="minimaxModel">模型引擎 (Model)</label><input type="text" id="minimaxModel"></div>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 20px;">
+            <button class="btn btn-primary" id="saveConfig" style="flex: 2;">💾 保存并同步全局配置</button>
+            <button class="btn btn-secondary" id="resetConfig" style="flex: 1;">🔄 重置本地修改</button>
+        </div>
+    </main>
+
+    <div id="blacklistModal">
+        <div class="modal-body">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="color: var(--accent);">当前实时黑名单 IP</h3>
+                <span onclick="closeBlacklistModal()" style="cursor:pointer; font-size: 24px;">&times;</span>
+            </div>
+            <div id="blacklistContent" style="max-height: 400px; overflow-y: auto; background: #0b1120; border-radius: 8px; padding: 15px;"></div>
+            <div style="text-align: right; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="closeBlacklistModal()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab 切换逻辑
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById(this.getAttribute('data-tab')).classList.add('active');
+            });
+        });
+
+        // 加载配置 (ID 完全对应你的逻辑)
+        function loadConfig() {
+            fetch('/anti-reptile/config').then(res => res.json()).then(config => {
+                document.getElementById('enabled').checked = config.enabled;
+                document.getElementById('globalFilterMode').checked = config.globalFilterMode;
+                document.getElementById('includeUrls').value = config.includeUrls?.join(',') || '';
+                document.getElementById('excludeUrls').value = config.excludeUrls?.join(',') || '';
+                
+                // IP 规则
+                const ip = config.ipRule;
+                document.getElementById('ipEnabled').checked = ip.enabled;
+                document.getElementById('expirationTime').value = ip.expirationTime;
+                document.getElementById('requestMaxSize').value = ip.requestMaxSize;
+                document.getElementById('ignoreIp').value = ip.ignoreIp?.join(',') || '';
+                document.getElementById('blackIp').value = ip.blackIp?.join(',') || '';
+                document.getElementById('penaltyExpirationTime').value = ip.penaltyExpirationTime;
+                document.getElementById('ipInterceptorStrategy').value = ip.interceptorStrategy;
+                document.getElementById('ipWhitelistExpirationTime').value = ip.whitelistExpirationTime;
+
+                // UA 规则
+                const ua = config.uaRule;
+                document.getElementById('uaEnabled').checked = ua.enabled;
+                document.getElementById('allowedLinux').checked = ua.allowedLinux;
+                document.getElementById('allowedMobile').checked = ua.allowedMobile;
+                document.getElementById('allowedPc').checked = ua.allowedPc;
+                document.getElementById('allowedIot').checked = ua.allowedIot;
+                document.getElementById('allowedProxy').checked = ua.allowedProxy;
+                document.getElementById('whiteUa').value = ua.whiteUa?.join(',') || '';
+                document.getElementById('blackUa').value = ua.blackUa?.join(',') || '';
+                document.getElementById('uaInterceptorStrategy').value = ua.interceptorStrategy;
+                document.getElementById('uaWhitelistExpirationTime').value = ua.whitelistExpirationTime;
+                document.getElementById('uaPenaltyExpirationTime').value = ua.penaltyExpirationTime;
+
+                // Cookie 规则
+                const ck = config.cookieRule;
+                document.getElementById('cookieEnabled').checked = ck.enabled;
+                document.getElementById('requiredCookies').value = ck.requiredCookies?.join(',') || '';
+                document.getElementById('allowEmptyCookie').checked = ck.allowEmptyCookie;
+                document.getElementById('blackCookies').value = ck.blackCookies?.join(',') || '';
+                document.getElementById('cookieInterceptorStrategy').value = ck.interceptorStrategy;
+                document.getElementById('cookieWhitelistExpirationTime').value = ck.whitelistExpirationTime;
+                document.getElementById('cookiePenaltyExpirationTime').value = ck.penaltyExpirationTime;
+
+                // Behavior 规则
+                const bh = config.behaviorChainRule;
+                document.getElementById('behaviorEnabled').checked = bh.enabled;
+                document.getElementById('chainRules').value = bh.chainRules?.join(',') || '';
+                document.getElementById('chainExpirationTime').value = bh.chainExpirationTime;
+                document.getElementById('behaviorWhitelistExpirationTime').value = bh.whitelistExpirationTime;
+                document.getElementById('behaviorInterceptorStrategy').value = bh.interceptorStrategy;
+                document.getElementById('behaviorPenaltyExpirationTime').value = bh.penaltyExpirationTime;
+
+                // AI
+                if (config.ai?.minimax) {
+                    document.getElementById('minimaxApiKey').value = config.ai.minimax.apiKey || '';
+                    document.getElementById('minimaxGroupId').value = config.ai.minimax.groupId || '';
+                    document.getElementById('minimaxModel').value = config.ai.minimax.model || 'abab5.5-chat';
+                }
+            }).catch(err => showAlert('加载配置失败', 'error'));
+        }
+
+        // 保存配置 (完整逻辑)
+        document.getElementById('saveConfig').addEventListener('click', () => {
+            const config = {
+                enabled: document.getElementById('enabled').checked,
+                globalFilterMode: document.getElementById('globalFilterMode').checked,
+                includeUrls: document.getElementById('includeUrls').value.split(',').filter(i => i.trim()),
+                excludeUrls: document.getElementById('excludeUrls').value.split(',').filter(i => i.trim()),
+                ipRule: {
+                    enabled: document.getElementById('ipEnabled').checked,
+                    expirationTime: parseInt(document.getElementById('expirationTime').value),
+                    requestMaxSize: parseInt(document.getElementById('requestMaxSize').value),
+                    ignoreIp: document.getElementById('ignoreIp').value.split(',').filter(i => i.trim()),
+                    blackIp: document.getElementById('blackIp').value.split(',').filter(i => i.trim()),
+                    penaltyExpirationTime: parseInt(document.getElementById('penaltyExpirationTime').value),
+                    interceptorStrategy: document.getElementById('ipInterceptorStrategy').value,
+                    whitelistExpirationTime: parseInt(document.getElementById('ipWhitelistExpirationTime').value)
+                },
+                uaRule: {
+                    enabled: document.getElementById('uaEnabled').checked,
+                    allowedLinux: document.getElementById('allowedLinux').checked,
+                    allowedMobile: document.getElementById('allowedMobile').checked,
+                    allowedPc: document.getElementById('allowedPc').checked,
+                    allowedIot: document.getElementById('allowedIot').checked,
+                    allowedProxy: document.getElementById('allowedProxy').checked,
+                    whiteUa: document.getElementById('whiteUa').value.split(',').filter(i => i.trim()),
+                    blackUa: document.getElementById('blackUa').value.split(',').filter(i => i.trim()),
+                    interceptorStrategy: document.getElementById('uaInterceptorStrategy').value,
+                    whitelistExpirationTime: parseInt(document.getElementById('uaWhitelistExpirationTime').value),
+                    penaltyExpirationTime: parseInt(document.getElementById('uaPenaltyExpirationTime').value)
+                },
+                cookieRule: {
+                    enabled: document.getElementById('cookieEnabled').checked,
+                    requiredCookies: document.getElementById('requiredCookies').value.split(',').filter(i => i.trim()),
+                    allowEmptyCookie: document.getElementById('allowEmptyCookie').checked,
+                    blackCookies: document.getElementById('blackCookies').value.split(',').filter(i => i.trim()),
+                    interceptorStrategy: document.getElementById('cookieInterceptorStrategy').value,
+                    whitelistExpirationTime: parseInt(document.getElementById('cookieWhitelistExpirationTime').value),
+                    penaltyExpirationTime: parseInt(document.getElementById('cookiePenaltyExpirationTime').value)
+                },
+                behaviorChainRule: {
+                    enabled: document.getElementById('behaviorEnabled').checked,
+                    chainRules: document.getElementById('chainRules').value.split(',').filter(i => i.trim()),
+                    chainExpirationTime: parseInt(document.getElementById('chainExpirationTime').value),
+                    whitelistExpirationTime: parseInt(document.getElementById('behaviorWhitelistExpirationTime').value),
+                    interceptorStrategy: document.getElementById('behaviorInterceptorStrategy').value,
+                    penaltyExpirationTime: parseInt(document.getElementById('behaviorPenaltyExpirationTime').value)
+                },
+                ai: {
+                    minimax: {
+                        apiKey: document.getElementById('minimaxApiKey').value.trim(),
+                        groupId: document.getElementById('minimaxGroupId').value.trim(),
+                        model: document.getElementById('minimaxModel').value.trim()
+                    }
+                }
+            };
+
+            fetch('/anti-reptile/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            }).then(res => res.json()).then(r => showAlert(r.success ? '配置已实时同步' : '保存失败', r.success ? 'success' : 'error'));
+        });
+
+        // 登出与提示
+        document.getElementById('logoutBtn').onclick = () => fetch('/ycx-config/logout', {method:'POST'}).then(() => window.location.href='/ycx-config/login.html');
+        document.getElementById('resetConfig').onclick = loadConfig;
+
+        function showAlert(msg, type) {
+            const el = document.getElementById('alert');
+            el.textContent = msg;
+            el.className = `alert alert-${type}`;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 3000);
+        }
+
+        function viewBlacklist() {
+            fetch('/anti-reptile/blacklist').then(res => res.json()).then(data => {
+                const container = document.getElementById('blacklistContent');
+                container.innerHTML = data.ips?.map(ip => `<div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05)">${ip}</div>`).join('') || '暂无黑名单';
+                document.getElementById('blacklistModal').style.display = 'flex';
+            });
+        }
+        function closeBlacklistModal() { document.getElementById('blacklistModal').style.display = 'none'; }
+
+        window.onload = loadConfig;
+    </script>
+</body>
+</html>

