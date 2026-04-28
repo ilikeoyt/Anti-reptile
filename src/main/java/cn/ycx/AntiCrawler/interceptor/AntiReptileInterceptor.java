@@ -164,7 +164,10 @@ public class AntiReptileInterceptor extends HandlerInterceptorAdapter {
                     response.getWriter().write(str3);
                 }
                 response.getWriter().close();
-                saveRequestInfo(requestInfo);
+                if (requestInfo.getResponseStatus() == 0) {
+                    requestInfo.setResponseStatus(200);
+                }
+                requestInfoStorage.saveRequestInfo(requestInfo);
                 return false;
             }
         }
